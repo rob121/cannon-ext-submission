@@ -1,0 +1,134 @@
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<section class="submission-page py-4 w-100" data-submission-page="{{.PageItem}}">
+  <div class="card">
+    <div class="card-body p-4">
+      <h1 class="card-title h3 mb-3">{{.Title}}</h1>
+      {{if .Introduction}}<p class="card-text text-muted mb-4">{{.Introduction}}</p>{{end}}
+      {{if .Submitted}}
+      <div class="alert alert-success" role="status">Thank you. Your submission has been sent to the review queue.</div>
+      {{end}}
+      {{if .Configured}}
+      <form method="post" action="{{.ActionURL}}" class="submission-form">
+        {{.CSRFField}}
+        <input type="hidden" name="return_url" value="{{.ReturnURL}}">
+        <div class="mb-3">
+          <label class="form-label" for="submission-title">Headline or short title</label>
+          <input class="form-control" id="submission-title" name="title" type="text" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="submission-body">Details</label>
+          <div id="submission-body-toolbar" class="submission-quill-toolbar">
+            <span class="ql-formats">
+              <select class="ql-header">
+                <option value="2"></option>
+                <option value="3"></option>
+                <option selected></option>
+              </select>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-bold" type="button"></button>
+              <button class="ql-italic" type="button"></button>
+              <button class="ql-underline" type="button"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-list" value="ordered" type="button"></button>
+              <button class="ql-list" value="bullet" type="button"></button>
+              <button class="ql-blockquote" type="button"></button>
+            </span>
+            <span class="ql-formats">
+              <button class="ql-link" type="button"></button>
+              <button class="ql-image" type="button"></button>
+              <button class="ql-clean" type="button"></button>
+            </span>
+          </div>
+          <div id="submission-body-editor" class="submission-quill-editor"></div>
+          <input type="hidden" id="submission-body" name="body">
+          <input type="file" id="submission-image-input" accept="image/*" class="visually-hidden">
+          <div class="invalid-feedback d-block visually-hidden" id="submission-body-error">Submission details are required.</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="submission-name">Your name</label>
+            <input class="form-control" id="submission-name" name="contributor_name" type="text">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="submission-email">Your email</label>
+            <input class="form-control" id="submission-email" name="contributor_email" type="email">
+          </div>
+        </div>
+        <div class="my-3 submission-form-captcha">
+          <captcha context="form" provider="any"></captcha>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+      {{else}}
+      <div class="alert alert-warning mb-0" role="status">Submission intake is not configured yet.</div>
+      {{end}}
+    </div>
+  </div>
+</section>
+<style>
+  .submission-quill-editor {
+    min-height: 220px;
+    background: #fff;
+  }
+  .submission-form .ql-container {
+    border-bottom-left-radius: .375rem;
+    border-bottom-right-radius: .375rem;
+    font-size: 1rem;
+  }
+  .submission-form .ql-toolbar {
+    border-top-left-radius: .375rem;
+    border-top-right-radius: .375rem;
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script>
+(function () {
+  var form = document.querySelector('.submission-form');
+  var editorEl = document.getElementById('submission-body-editor');
+  var input = document.getElementById('submission-body');
+  var imageInput = document.getElementById('submission-image-input');
+  var error = document.getElementById('submission-body-error');
+  if (!form || !editorEl || !input || !window.Quill) return;
+
+  var quill = new Quill(editorEl, {
+    theme: 'snow',
+    modules: {
+      toolbar: {
+        container: '#submission-body-toolbar',
+        handlers: {
+          image: function () {
+            if (imageInput) imageInput.click();
+          }
+        }
+      }
+    },
+    formats: ['header', 'bold', 'italic', 'underline', 'list', 'blockquote', 'link', 'image']
+  });
+
+  if (imageInput) {
+    imageInput.addEventListener('change', function () {
+      var file = imageInput.files && imageInput.files[0];
+      imageInput.value = '';
+      if (!file || !file.type || file.type.indexOf('image/') !== 0) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var range = quill.getSelection(true);
+        quill.insertEmbed(range.index, 'image', reader.result, 'user');
+        quill.setSelection(range.index + 1, 0, 'user');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  form.addEventListener('submit', function (event) {
+    input.value = quill.root.innerHTML;
+    if (!quill.getText().trim() && !quill.root.querySelector('img')) {
+      event.preventDefault();
+      error.classList.remove('visually-hidden');
+      editorEl.querySelector('.ql-editor').focus();
+    }
+  });
+})();
+</script>

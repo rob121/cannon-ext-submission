@@ -1,0 +1,168 @@
+<section class="admin-extension-page">
+  <div class="submission-admin-header">
+    <div class="admin-page-actions">
+      <a class="btn-admin-outline" href="{{.SettingsURL}}" data-turbo-frame="_top"><i class="bi bi-sliders"></i> Settings</a>
+      <a class="btn-admin-primary" href="{{.ReviewURL}}" data-turbo-frame="_top"><i class="bi bi-inbox"></i> Review Queue</a>
+    </div>
+  </div>
+
+  <div class="submission-admin-summary">
+    <div class="submission-admin-summary-card">
+      <div class="submission-admin-summary-icon"><i class="bi bi-folder2-open"></i></div>
+      <div class="submission-admin-summary-content">
+        <span class="submission-admin-summary-label">Destination Category</span>
+        <strong>{{if .Configured}}{{.Category.Name}}{{else}}Not configured{{end}}</strong>
+        {{if .Configured}}<span class="admin-cell-muted">/{{.Category.Slug}}</span>{{end}}
+      </div>
+    </div>
+    <div class="submission-admin-summary-card">
+      <div class="submission-admin-summary-icon"><i class="bi bi-hourglass-split"></i></div>
+      <div class="submission-admin-summary-content">
+        <span class="submission-admin-summary-label">Pending In Category</span>
+        <strong>{{.Total}}</strong>
+        <span class="admin-cell-muted">Awaiting editorial review</span>
+      </div>
+    </div>
+  </div>
+
+  {{if not .Configured}}
+  <div class="admin-alert admin-alert-info submission-admin-alert">
+    Select an active destination category before publishing a submission route.
+  </div>
+  {{end}}
+
+  <div class="admin-data-card">
+    <div class="admin-data-card-header submission-admin-card-header">
+      <div class="admin-data-card-summary-main">
+        <h2 class="admin-data-card-title">Recent Pending Submissions</h2>
+        <p class="admin-data-card-desc">Latest public submissions saved by this extension.</p>
+      </div>
+      <a class="btn-admin-outline btn-admin-sm" href="{{.ReviewURL}}" data-turbo-frame="_top">View All</a>
+    </div>
+    <div class="admin-table-scroll">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th class="admin-col-actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Rows}}
+          <tr>
+            <td>
+              <span class="admin-cell-primary">{{.Title}}</span>
+              <div class="admin-cell-muted">/{{.Slug}}</div>
+            </td>
+            <td><span class="admin-badge">Pending</span></td>
+            <td class="admin-cell-muted">{{formatTime .CreatedAt}}</td>
+            <td class="admin-col-actions">
+              <div class="admin-row-actions">
+                <a class="btn-admin-icon" href="/admin/items/{{.ItemID}}" data-turbo-frame="_top" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="4" class="admin-table-empty-cell">
+              <div class="admin-empty-state">
+                <div class="admin-empty-state-icon"><i class="bi bi-inbox"></i></div>
+                <div class="admin-empty-state-title">No pending submissions</div>
+                <p class="admin-empty-state-desc">New public submissions for the configured category will appear here.</p>
+              </div>
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<style>
+  .admin-extension-app .submission-admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .admin-extension-app .submission-admin-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .admin-extension-app .submission-admin-summary-card {
+    display: flex;
+    gap: 0.875rem;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius-lg);
+    background: var(--admin-card);
+    box-shadow: var(--admin-shadow-xs);
+  }
+
+  .admin-extension-app .submission-admin-summary-icon {
+    display: inline-flex;
+    width: 2.5rem;
+    height: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.625rem;
+    color: var(--admin-primary);
+    background: rgba(37, 99, 235, 0.08);
+    flex: 0 0 auto;
+  }
+
+  .admin-extension-app .submission-admin-summary-content {
+    min-width: 0;
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  .admin-extension-app .submission-admin-summary-content strong {
+    font-size: 1.15rem;
+    font-weight: 650;
+    color: var(--admin-foreground);
+  }
+
+  .admin-extension-app .submission-admin-summary-label {
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: #52525b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .admin-extension-app .submission-admin-alert {
+    margin-bottom: 1.25rem;
+  }
+
+  .admin-extension-app .submission-admin-card-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  @media (max-width: 760px) {
+    .admin-extension-app .submission-admin-header,
+    .admin-extension-app .submission-admin-card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-extension-app .submission-admin-summary {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
