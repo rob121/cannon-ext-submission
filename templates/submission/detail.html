@@ -1,0 +1,324 @@
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<section class="admin-extension-page">
+  <div class="submission-detail-toolbar">
+    <a class="btn-admin-outline" href="{{.BaseURL}}" data-turbo-frame="_top"><i class="bi bi-arrow-left"></i> Back</a>
+    {{if .EditItemURL}}<a class="btn-admin-primary" href="{{.EditItemURL}}" data-turbo-frame="_top"><i class="bi bi-pencil"></i> Edit Imported Item</a>{{end}}
+  </div>
+
+  {{if .Notice}}<div class="admin-alert admin-alert-success">{{.Notice}}</div>{{end}}
+  {{if .Error}}<div class="admin-alert admin-alert-danger">{{.Error}}</div>{{end}}
+
+  <form method="post" action="{{.BaseURL}}/submissions/{{.Submission.SubmissionID}}" data-turbo="false" class="submission-detail-form">
+    {{.CSRFField}}
+    <div class="submission-detail-grid">
+      <div class="admin-data-card">
+        <div class="admin-data-card-header">
+          <div class="admin-data-card-summary-main">
+            <h2 class="admin-data-card-title">Submission</h2>
+            <p class="admin-data-card-desc">Edit the queued content before importing it.</p>
+          </div>
+          <span class="admin-badge">{{.Submission.Status}}</span>
+        </div>
+        <div class="submission-detail-fields">
+          <div class="admin-form-group">
+            <label class="admin-form-label" for="submission-title">Title</label>
+            <input class="admin-form-control" id="submission-title" name="title" value="{{.Submission.Title}}" required>
+          </div>
+          <div class="admin-form-group">
+            <label class="admin-form-label" for="submission-body">Body</label>
+            <div id="submission-body-toolbar" class="submission-quill-toolbar">
+              <span class="ql-formats">
+                <select class="ql-header">
+                  <option value="2"></option>
+                  <option value="3"></option>
+                  <option selected></option>
+                </select>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-bold" type="button"></button>
+                <button class="ql-italic" type="button"></button>
+                <button class="ql-underline" type="button"></button>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-list" value="ordered" type="button"></button>
+                <button class="ql-list" value="bullet" type="button"></button>
+                <button class="ql-blockquote" type="button"></button>
+              </span>
+              <span class="ql-formats">
+                <button class="ql-link" type="button"></button>
+                <button class="ql-clean" type="button"></button>
+              </span>
+            </div>
+            <div id="submission-body-editor" class="submission-quill-editor">{{safeHTML .Submission.Body}}</div>
+            <textarea class="admin-form-control submission-body-textarea" id="submission-body" name="body">{{.Submission.Body}}</textarea>
+          </div>
+          <div class="admin-form-grid">
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="submission-name">Contributor Name</label>
+              <input class="admin-form-control" id="submission-name" name="contributor_name" value="{{.Submission.ContributorName}}">
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="submission-email">Contributor Email</label>
+              <input class="admin-form-control" id="submission-email" name="contributor_email" type="email" value="{{.Submission.ContributorEmail}}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="submission-detail-side">
+        <div class="admin-data-card">
+          <div class="admin-data-card-header">
+            <div class="admin-data-card-summary-main">
+              <h2 class="admin-data-card-title">Import</h2>
+              <p class="admin-data-card-desc">Choose where the item and files should land.</p>
+            </div>
+          </div>
+          <div class="submission-detail-fields">
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="submission-category">Category</label>
+              <select class="admin-form-control" id="submission-category" name="category_id" required>
+                {{range .Categories}}
+                <option value="{{.CategoryID}}" {{if eq .CategoryID $.CategoryID}}selected{{end}}>{{.Name}}</option>
+                {{end}}
+              </select>
+            </div>
+            <div class="admin-form-group">
+              <label class="admin-form-label" for="submission-media-folder">Media Folder</label>
+              <input class="admin-form-control" id="submission-media-folder" name="media_folder" value="{{.MediaFolder}}">
+            </div>
+          </div>
+          <div class="submission-detail-actions">
+            <button class="btn-admin-primary" type="submit" name="action" value="import" {{if eq .Submission.Status "imported"}}disabled{{end}}>
+              <i class="bi bi-box-arrow-in-down"></i> Import
+            </button>
+            <button class="btn-admin-outline" type="submit" name="action" value="reject" {{if ne .Submission.Status "pending"}}disabled{{end}}>
+              <i class="bi bi-x-circle"></i> Reject
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-data-card">
+          <div class="admin-data-card-header">
+            <div class="admin-data-card-summary-main">
+              <h2 class="admin-data-card-title">Files</h2>
+              <p class="admin-data-card-desc">Moved into the media library when imported.</p>
+            </div>
+          </div>
+          <div class="submission-file-list">
+            {{range .Files}}
+            <div class="submission-file-card">
+              <div class="submission-file-row">
+                <i class="bi bi-file-earmark"></i>
+                <div>
+                  <strong>{{.OriginalName}}</strong>
+                  <span>{{.MIME}} &middot; {{.SizeLabel}}</span>
+                </div>
+                {{if .CanOpen}}
+                <a class="btn-admin-outline btn-admin-sm" href="{{.DataURL}}" target="_blank" download="{{.OriginalName}}">Open</a>
+                {{end}}
+              </div>
+              {{if .IsImage}}
+                {{if .CanOpen}}<img class="submission-file-preview-image" src="{{.DataURL}}" alt="{{.OriginalName}}">{{end}}
+              {{else if .IsPDF}}
+                {{if .CanOpen}}<iframe class="submission-file-preview-pdf" src="{{.DataURL}}" title="{{.OriginalName}}"></iframe>{{end}}
+              {{else if .IsText}}
+                {{if .PreviewText}}<pre class="submission-file-preview-text">{{.PreviewText}}</pre>{{end}}
+              {{else if .CanOpen}}
+                <div class="submission-file-preview-empty">Open this file to inspect it before import.</div>
+              {{end}}
+              {{if .TooLarge}}
+              <div class="submission-file-preview-empty">This file is too large to preview inline.</div>
+              {{end}}
+            </div>
+            {{else}}
+            <div class="admin-empty-state">
+              <div class="admin-empty-state-title">No attached files</div>
+            </div>
+            {{end}}
+          </div>
+        </div>
+      </aside>
+    </div>
+  </form>
+</section>
+
+<style>
+  .admin-extension-app .submission-detail-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-extension-app .submission-detail-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .admin-extension-app .submission-detail-side {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .admin-extension-app .submission-detail-fields {
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .admin-extension-app .submission-body-textarea {
+    min-height: 24rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  .admin-extension-app .submission-body-hidden {
+    display: none;
+  }
+
+  .admin-extension-app .submission-quill-editor {
+    min-height: 24rem;
+    background: #fff;
+  }
+
+  .admin-extension-app .submission-detail-form .ql-container {
+    border-bottom-left-radius: var(--admin-radius);
+    border-bottom-right-radius: var(--admin-radius);
+    font-size: 1rem;
+  }
+
+  .admin-extension-app .submission-detail-form .ql-toolbar {
+    border-top-left-radius: var(--admin-radius);
+    border-top-right-radius: var(--admin-radius);
+  }
+
+  .admin-extension-app .submission-detail-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0 1rem 1rem;
+  }
+
+  .admin-extension-app .submission-file-list {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .admin-extension-app .submission-file-card {
+    display: grid;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--admin-border);
+  }
+
+  .admin-extension-app .submission-file-card:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .admin-extension-app .submission-file-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .admin-extension-app .submission-file-row > div {
+    display: grid;
+    min-width: 0;
+  }
+
+  .admin-extension-app .submission-file-row strong,
+  .admin-extension-app .submission-file-row span {
+    overflow-wrap: anywhere;
+  }
+
+  .admin-extension-app .submission-file-row span {
+    color: #71717a;
+    font-size: 0.875rem;
+  }
+
+  .admin-extension-app .submission-file-preview-image {
+    display: block;
+    width: 100%;
+    max-height: 18rem;
+    object-fit: contain;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    background: #fff;
+  }
+
+  .admin-extension-app .submission-file-preview-pdf {
+    width: 100%;
+    min-height: 22rem;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    background: #fff;
+  }
+
+  .admin-extension-app .submission-file-preview-text {
+    max-height: 18rem;
+    overflow: auto;
+    padding: 0.75rem;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    background: #fafafa;
+    color: var(--admin-foreground);
+    font-size: 0.8125rem;
+    white-space: pre-wrap;
+  }
+
+  .admin-extension-app .submission-file-preview-empty {
+    padding: 0.75rem;
+    border: 1px dashed var(--admin-border);
+    border-radius: var(--admin-radius);
+    color: #71717a;
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 900px) {
+    .admin-extension-app .submission-detail-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .admin-extension-app .submission-detail-toolbar,
+    .admin-extension-app .submission-detail-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .admin-extension-app .submission-file-row {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .admin-extension-app .submission-file-row .btn-admin-outline {
+      grid-column: 1 / -1;
+      justify-content: center;
+    }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script>
+(function () {
+  var form = document.querySelector('.submission-detail-form');
+  var editorEl = document.getElementById('submission-body-editor');
+  var input = document.getElementById('submission-body');
+  if (!form || !editorEl || !input || !window.Quill) return;
+
+  var quill = new Quill(editorEl, {
+    theme: 'snow',
+    modules: {
+      toolbar: '#submission-body-toolbar'
+    },
+    formats: ['header', 'bold', 'italic', 'underline', 'list', 'blockquote', 'link']
+  });
+  input.classList.add('submission-body-hidden');
+
+  form.addEventListener('submit', function () {
+    input.value = quill.root.innerHTML;
+  });
+})();
+</script>

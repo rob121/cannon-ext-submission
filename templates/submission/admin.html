@@ -2,42 +2,26 @@
   <div class="submission-admin-header">
     <div class="admin-page-actions">
       <a class="btn-admin-outline" href="{{.SettingsURL}}" data-turbo-frame="_top"><i class="bi bi-sliders"></i> Settings</a>
-      <a class="btn-admin-primary" href="{{.ReviewURL}}" data-turbo-frame="_top"><i class="bi bi-inbox"></i> Review Queue</a>
     </div>
   </div>
 
   <div class="submission-admin-summary">
     <div class="submission-admin-summary-card">
-      <div class="submission-admin-summary-icon"><i class="bi bi-folder2-open"></i></div>
+      <div class="submission-admin-summary-icon"><i class="bi bi-inbox"></i></div>
       <div class="submission-admin-summary-content">
-        <span class="submission-admin-summary-label">Destination Category</span>
-        <strong>{{if .Configured}}{{.Category.Name}}{{else}}Not configured{{end}}</strong>
-        {{if .Configured}}<span class="admin-cell-muted">/{{.Category.Slug}}</span>{{end}}
-      </div>
-    </div>
-    <div class="submission-admin-summary-card">
-      <div class="submission-admin-summary-icon"><i class="bi bi-hourglass-split"></i></div>
-      <div class="submission-admin-summary-content">
-        <span class="submission-admin-summary-label">Pending In Category</span>
+        <span class="submission-admin-summary-label">Pending Queue</span>
         <strong>{{.Total}}</strong>
-        <span class="admin-cell-muted">Awaiting editorial review</span>
+        <span class="admin-cell-muted">Ready to import or reject</span>
       </div>
     </div>
   </div>
-
-  {{if not .Configured}}
-  <div class="admin-alert admin-alert-info submission-admin-alert">
-    Select an active destination category before publishing a submission route.
-  </div>
-  {{end}}
 
   <div class="admin-data-card">
     <div class="admin-data-card-header submission-admin-card-header">
       <div class="admin-data-card-summary-main">
-        <h2 class="admin-data-card-title">Recent Pending Submissions</h2>
-        <p class="admin-data-card-desc">Latest public submissions saved by this extension.</p>
+        <h2 class="admin-data-card-title">Pending Submissions</h2>
+        <p class="admin-data-card-desc">Public submissions that have not been imported or rejected.</p>
       </div>
-      <a class="btn-admin-outline btn-admin-sm" href="{{.ReviewURL}}" data-turbo-frame="_top">View All</a>
     </div>
     <div class="admin-table-scroll">
       <table class="admin-table">
@@ -53,15 +37,15 @@
           {{range .Rows}}
           <tr>
             <td>
-              <span class="admin-cell-primary">{{.Title}}</span>
-              <div class="admin-cell-muted">/{{.Slug}}</div>
+              <a class="admin-cell-primary submission-admin-title-link" href="{{$.BaseURL}}/submissions/{{.SubmissionID}}" data-turbo="false">{{.Title}}</a>
+              <div class="admin-cell-muted">{{if .ContributorEmail}}{{.ContributorEmail}}{{else}}{{.ContributorName}}{{end}}</div>
             </td>
-            <td><span class="admin-badge">Pending</span></td>
+            <td><span class="admin-badge">{{.Status}}</span></td>
             <td class="admin-cell-muted">{{formatTime .CreatedAt}}</td>
             <td class="admin-col-actions">
               <div class="admin-row-actions">
-                <a class="btn-admin-icon" href="/admin/items/{{.ItemID}}" data-turbo-frame="_top" title="Edit">
-                  <i class="bi bi-pencil"></i>
+                <a class="btn-admin-icon" href="{{$.BaseURL}}/submissions/{{.SubmissionID}}" data-turbo="false" title="View">
+                  <i class="bi bi-eye"></i>
                 </a>
               </div>
             </td>
@@ -72,7 +56,7 @@
               <div class="admin-empty-state">
                 <div class="admin-empty-state-icon"><i class="bi bi-inbox"></i></div>
                 <div class="admin-empty-state-title">No pending submissions</div>
-                <p class="admin-empty-state-desc">New public submissions for the configured category will appear here.</p>
+                <p class="admin-empty-state-desc">New public submissions will appear here before they become content items.</p>
               </div>
             </td>
           </tr>
@@ -152,6 +136,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+  }
+
+  .admin-extension-app .submission-admin-title-link {
+    text-decoration: none;
+  }
+
+  .admin-extension-app .submission-admin-title-link:hover {
+    text-decoration: underline;
   }
 
   @media (max-width: 760px) {

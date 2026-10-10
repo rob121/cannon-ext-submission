@@ -15,6 +15,16 @@
           <label class="form-label" for="submission-title">Headline or short title</label>
           <input class="form-control" id="submission-title" name="title" type="text" required>
         </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label" for="submission-name">Your name</label>
+            <input class="form-control" id="submission-name" name="contributor_name" type="text">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="submission-email">Your email</label>
+            <input class="form-control" id="submission-email" name="contributor_email" type="email">
+          </div>
+        </div>
         <div class="mb-3">
           <label class="form-label" for="submission-body">Details</label>
           <div id="submission-body-toolbar" class="submission-quill-toolbar">
@@ -37,25 +47,22 @@
             </span>
             <span class="ql-formats">
               <button class="ql-link" type="button"></button>
-              <button class="ql-image" type="button"></button>
               <button class="ql-clean" type="button"></button>
             </span>
           </div>
           <div id="submission-body-editor" class="submission-quill-editor"></div>
           <input type="hidden" id="submission-body" name="body">
-          <input type="file" id="submission-image-input" accept="image/*" class="visually-hidden">
           <div class="invalid-feedback d-block visually-hidden" id="submission-body-error">Submission details are required.</div>
         </div>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label" for="submission-name">Your name</label>
-            <input class="form-control" id="submission-name" name="contributor_name" type="text">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="submission-email">Your email</label>
-            <input class="form-control" id="submission-email" name="contributor_email" type="email">
-          </div>
+        {{if .AllowFiles}}
+        <div class="mb-3">
+          <label class="form-label" for="submission-files">Attach files</label>
+          <input class="form-control" id="submission-files" type="file" multiple accept="{{.AcceptAttribute}}">
+          <input type="hidden" id="submission-attachments" name="attachments_json">
+          <div class="form-text">Allowed: {{.AllowedExtensions}}. Each file can be up to {{.MaxFileSizeMB}} MB.</div>
+          <div class="invalid-feedback d-block visually-hidden" id="submission-files-error"></div>
         </div>
+        {{end}}
         <div class="my-3 submission-form-captcha">
           <captcha context="form" provider="any"></captcha>
         </div>
@@ -88,46 +95,65 @@
   var form = document.querySelector('.submission-form');
   var editorEl = document.getElementById('submission-body-editor');
   var input = document.getElementById('submission-body');
-  var imageInput = document.getElementById('submission-image-input');
   var error = document.getElementById('submission-body-error');
+  var fileInput = document.getElementById('submission-files');
+  var attachmentsInput = document.getElementById('submission-attachments');
+  var fileError = document.getElementById('submission-files-error');
+  var maxFileSize = {{.MaxFileSizeMB}} * 1024 * 1024;
   if (!form || !editorEl || !input || !window.Quill) return;
 
   var quill = new Quill(editorEl, {
     theme: 'snow',
     modules: {
-      toolbar: {
-        container: '#submission-body-toolbar',
-        handlers: {
-          image: function () {
-            if (imageInput) imageInput.click();
-          }
-        }
-      }
+      toolbar: '#submission-body-toolbar'
     },
-    formats: ['header', 'bold', 'italic', 'underline', 'list', 'blockquote', 'link', 'image']
+    formats: ['header', 'bold', 'italic', 'underline', 'list', 'blockquote', 'link']
   });
 
-  if (imageInput) {
-    imageInput.addEventListener('change', function () {
-      var file = imageInput.files && imageInput.files[0];
-      imageInput.value = '';
-      if (!file || !file.type || file.type.indexOf('image/') !== 0) return;
+  function readFile(file) {
+    return new Promise(function (resolve, reject) {
+      if (file.size > maxFileSize) {
+        reject(new Error(file.name + ' exceeds the maximum file size.'));
+        return;
+      }
       var reader = new FileReader();
       reader.onload = function () {
-        var range = quill.getSelection(true);
-        quill.insertEmbed(range.index, 'image', reader.result, 'user');
-        quill.setSelection(range.index + 1, 0, 'user');
+        resolve({
+          name: file.name,
+          type: file.type || '',
+          size: file.size,
+          data: reader.result
+        });
+      };
+      reader.onerror = function () {
+        reject(new Error('Could not read ' + file.name + '.'));
       };
       reader.readAsDataURL(file);
     });
   }
 
-  form.addEventListener('submit', function (event) {
+  form.addEventListener('submit', async function (event) {
     input.value = quill.root.innerHTML;
-    if (!quill.getText().trim() && !quill.root.querySelector('img')) {
+    if (!quill.getText().trim()) {
       event.preventDefault();
       error.classList.remove('visually-hidden');
       editorEl.querySelector('.ql-editor').focus();
+      return;
+    }
+    if (fileInput && attachmentsInput && fileInput.files && fileInput.files.length) {
+      event.preventDefault();
+      if (fileError) fileError.classList.add('visually-hidden');
+      try {
+        var files = Array.prototype.slice.call(fileInput.files);
+        var payload = await Promise.all(files.map(readFile));
+        attachmentsInput.value = JSON.stringify(payload);
+        form.submit();
+      } catch (err) {
+        if (fileError) {
+          fileError.textContent = err.message || 'One or more files could not be attached.';
+          fileError.classList.remove('visually-hidden');
+        }
+      }
     }
   });
 })();
