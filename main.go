@@ -37,7 +37,7 @@ const (
 	extensionName        = "cannon-ext-submission"
 	extensionTitle       = "News Submission"
 	extensionDescription = "Adds a public news tip submission form that queues Cannon content items for editorial review."
-	extensionVersion     = "0.1.0"
+	extensionVersion     = "0.2.0"
 	updateURLBase        = "https://github.com/rob121/cannon-ext-submission/releases/download"
 	defaultAdminMenu     = "News Submissions"
 	configSection        = "general"
