@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -37,7 +38,7 @@ const (
 	extensionName        = "cannon-ext-submission"
 	extensionTitle       = "News Submission"
 	extensionDescription = "Adds a public news tip submission form that queues Cannon content items for editorial review."
-	extensionVersion     = "0.2.0"
+	extensionVersion     = "0.2.1"
 	updateURLBase        = "https://github.com/rob121/cannon-ext-submission/releases/download"
 	defaultAdminMenu     = "News Submissions"
 	configSection        = "general"
@@ -68,6 +69,9 @@ type submissionApp struct {
 	info          extension.Info
 	templates     *extension.Templates
 	settingsTable string
+
+	schemaOnce sync.Once
+	schemaErr  error
 }
 
 type submissionSettings struct {
@@ -173,6 +177,7 @@ type itemAttachment struct {
 
 type configStore struct {
 	table string
+	app   *submissionApp
 }
 
 type configProvider struct {
@@ -204,7 +209,7 @@ func newServer() *extension.Server {
 	s.EmbedHelp(helpFiles, "help")
 	s.EmbedTemplates(templateFiles, "templates")
 	s.OnInstall(app.install)
-	s.OnConfiguration(configProvider{store: configStore{table: app.settingsTable}})
+	s.OnConfiguration(configProvider{store: configStore{table: app.settingsTable, app: app}})
 	s.RegisterPage(extension.PageDefinition{
 		ID:    "submission-form",
 		Title: "News Submission Form",
@@ -219,10 +224,18 @@ func (app *submissionApp) install(req extension.WireRequest) error {
 	if err != nil {
 		return err
 	}
-	if err := extension.MigrateConfigurationStore(db, app.settingsTable); err != nil {
-		return err
-	}
-	return migrateSubmissionStore(db)
+	return app.ensureSchema(db)
+}
+
+func (app *submissionApp) ensureSchema(db *gorm.DB) error {
+	app.schemaOnce.Do(func() {
+		app.schemaErr = extension.MigrateConfigurationStore(db, app.settingsTable)
+		if app.schemaErr != nil {
+			return
+		}
+		app.schemaErr = migrateSubmissionStore(db)
+	})
+	return app.schemaErr
 }
 
 func (app *submissionApp) page(item string, req extension.WireRequest) extension.WireResponse {
@@ -279,7 +292,7 @@ func (app *submissionApp) submit(req extension.WireRequest) extension.WireRespon
 	if err != nil {
 		return extension.Error(http.StatusInternalServerError, err.Error())
 	}
-	if err := migrateSubmissionStore(db); err != nil {
+	if err := app.ensureSchema(db); err != nil {
 		return extension.Error(http.StatusInternalServerError, err.Error())
 	}
 	row := submissionRow{
@@ -315,7 +328,7 @@ func (app *submissionApp) admin(req extension.WireRequest) extension.WireRespons
 	if err != nil {
 		return extension.Error(http.StatusInternalServerError, err.Error())
 	}
-	if err := migrateSubmissionStore(db); err != nil {
+	if err := app.ensureSchema(db); err != nil {
 		return extension.Error(http.StatusInternalServerError, err.Error())
 	}
 	rows, total, err := recentPendingSubmissions()
@@ -410,7 +423,7 @@ func redirectToAdminItem(itemID uint) extension.WireResponse {
 }
 
 func (app *submissionApp) loadSettings() (submissionSettings, error) {
-	data, err := configStore{table: app.settingsTable}.Load(configSection)
+	data, err := configStore{table: app.settingsTable, app: app}.Load(configSection)
 	if err != nil {
 		return submissionSettings{}, err
 	}
@@ -794,11 +807,10 @@ func (s configStore) Load(section string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := extension.MigrateConfigurationStore(db, s.table); err != nil {
-		return nil, err
-	}
-	if err := migrateSubmissionStore(db); err != nil {
-		return nil, err
+	if s.app != nil {
+		if err := s.app.ensureSchema(db); err != nil {
+			return nil, err
+		}
 	}
 	return extension.DBConfigurationStore(db, s.table).Load(section)
 }
@@ -808,8 +820,10 @@ func (s configStore) Save(section string, data map[string]any) error {
 	if err != nil {
 		return err
 	}
-	if err := extension.MigrateConfigurationStore(db, s.table); err != nil {
-		return err
+	if s.app != nil {
+		if err := s.app.ensureSchema(db); err != nil {
+			return err
+		}
 	}
 	return extension.DBConfigurationStore(db, s.table).Save(section, data)
 }
