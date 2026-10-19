@@ -181,6 +181,12 @@ func TestSubmitCreatesQueuedSubmissionWithFiles(t *testing.T) {
 	if loc := resp.Header["Location"]; len(loc) != 1 || loc[0] != "/submit-news?submitted=1" {
 		t.Fatalf("redirect = %#v", resp.Header)
 	}
+	if len(resp.EmitEvents) != 1 || resp.EmitEvents[0].Event != "onSubmissionAfterCreate" {
+		t.Fatalf("emit_events = %#v", resp.EmitEvents)
+	}
+	if title, _ := resp.EmitEvents[0].Arguments["title"].(string); title != "Road closure downtown" {
+		t.Fatalf("emit title = %#v", resp.EmitEvents[0].Arguments)
+	}
 
 	db, _, err := extension.OpenDB()
 	if err != nil {

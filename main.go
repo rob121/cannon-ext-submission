@@ -38,7 +38,7 @@ const (
 	extensionName        = "cannon-ext-submission"
 	extensionTitle       = "News Submission"
 	extensionDescription = "Adds a public news tip submission form that queues Cannon content items for editorial review."
-	extensionVersion     = "0.2.1"
+	extensionVersion     = "0.2.2"
 	updateURLBase        = "https://github.com/rob121/cannon-ext-submission/releases/download"
 	defaultAdminMenu     = "News Submissions"
 	configSection        = "general"
@@ -313,7 +313,16 @@ func (app *submissionApp) submit(req extension.WireRequest) extension.WireRespon
 	if redirectURL == "" {
 		redirectURL = req.URL
 	}
-	return extension.Redirect(http.StatusSeeOther, submittedRedirect(redirectURL))
+	resp := extension.Redirect(http.StatusSeeOther, submittedRedirect(redirectURL))
+	return extension.WithEmit(resp, "onSubmissionAfterCreate", map[string]any{
+		"submission_id":     row.SubmissionID,
+		"title":             row.Title,
+		"contributor_name":  row.ContributorName,
+		"contributor_email": row.ContributorEmail,
+		"status":            row.Status,
+		"admin_url":         adminBaseURL() + "/submissions/" + strconv.FormatUint(uint64(row.SubmissionID), 10),
+		"site_id":           req.SiteID,
+	})
 }
 
 func (app *submissionApp) admin(req extension.WireRequest) extension.WireResponse {
