@@ -38,7 +38,7 @@ const (
 	extensionName        = "cannon-ext-submission"
 	extensionTitle       = "News Submission"
 	extensionDescription = "Adds a public news tip submission form that queues Cannon content items for editorial review."
-	extensionVersion     = "0.2.2"
+	extensionVersion     = "0.2.3"
 	updateURLBase        = "https://github.com/rob121/cannon-ext-submission/releases/download"
 	defaultAdminMenu     = "News Submissions"
 	configSection        = "general"
@@ -216,6 +216,22 @@ func newServer() *extension.Server {
 	}, app.page)
 	s.HandleData("submission/submit", app.submit)
 	s.HandleAdmin("/admin/", app.admin)
+	s.RegisterNotificationEvent(extension.NotificationEventDefinition{
+		Event:       "onSubmissionAfterCreate",
+		Label:       "News tip submitted",
+		Group:       "submissions",
+		GroupLabel:  "Submissions",
+		Description: "Fired after a public news tip is saved to the review queue.",
+		Placeholders: []extension.NotificationPlaceholder{
+			{Key: "submission_id", Label: "Submission ID", Description: "Queue row id"},
+			{Key: "title", Label: "Title", Description: "Submitted tip title"},
+			{Key: "contributor_name", Label: "Contributor name"},
+			{Key: "contributor_email", Label: "Contributor email"},
+			{Key: "status", Label: "Status", Description: "Usually pending"},
+			{Key: "admin_url", Label: "Admin URL", Description: "Link to review the tip"},
+			{Key: "site_id", Label: "Site ID"},
+		},
+	})
 	return s
 }
 

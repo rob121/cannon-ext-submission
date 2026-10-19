@@ -20,7 +20,8 @@ Adds a public news tip submission form to Cannon. Submitted tips are saved in an
 This extension exposes:
 
 - `/meta`: extension name, description, version, and update URL base.
-- `/capabilities`: page, admin, configuration, help, templates, and data capabilities.
+- `/capabilities`: page, admin, configuration, help, templates, data, and notifications capabilities.
+- `/notifications`: advertises `onSubmissionAfterCreate` for Cannon System → Notifications.
 - `/admin`: submission dashboard and review detail UI.
 - `/configuration`: form, default import category, and attachment settings.
 - `/page`: public news submission page definition and rendering.
@@ -46,7 +47,7 @@ Use Cannon's extension configuration screen to adjust the public form text, opti
 The extension reports:
 
 - Name: `cannon-ext-submission`
-- Version: `0.1.0`
+- Version: `0.2.3`
 - Update URL base: `https://github.com/rob121/cannon-ext-submission/releases/download`
 
 GitHub releases should include a `cannon-extension.json` manifest plus platform binaries.

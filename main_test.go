@@ -37,10 +37,33 @@ func TestCapabilities(t *testing.T) {
 		"help":          "/help",
 		"configuration": "/configuration",
 		"templates":     "/templates",
+		"notifications": "/notifications",
 	} {
 		if got.Capabilities[key] != want {
 			t.Fatalf("capability %s = %q, want %q", key, got.Capabilities[key], want)
 		}
+	}
+}
+
+func TestNotificationEventCatalog(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
+	rec := httptest.NewRecorder()
+	newServer().Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	var got extension.NotificationEventListResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Events) != 1 || got.Events[0].Event != "onSubmissionAfterCreate" {
+		t.Fatalf("events = %#v", got.Events)
+	}
+	if got.Events[0].Group != "submissions" {
+		t.Fatalf("group = %q", got.Events[0].Group)
+	}
+	if len(got.Events[0].Placeholders) == 0 {
+		t.Fatal("expected placeholders")
 	}
 }
 
